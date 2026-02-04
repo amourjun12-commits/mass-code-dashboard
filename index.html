@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Mass Code - Content Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .card-icon {
+            font-size: 2em;
+        }
+        
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .stat-big {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .video-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .video-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .video-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .video-link:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .performance-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .badge-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-good {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .refresh-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .refresh-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 The Mass Code</h1>
+            <p>Content Performance Dashboard</p>
+        </div>
+        
+        <div class="last-updated" id="lastUpdated">
+            Last updated: Loading...
+        </div>
+        
+        <div id="dashboard">
+            <div class="loading">Loading data...</div>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+    </div>
+    
+    <script>
+        const YOUTUBE_API_KEY = 'AIzaSyDT9CDwHtdijT2DqXDago098XkeMeHWqH0';
+        const CHANNEL_ID = 'UCbspUGGZNP2ZNS70n45bt-Q';
+        
+        async function loadData() {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.innerHTML = '<div class="loading">Loading data...</div>';
+            
+            try {
+                // Get channel stats
+                const channelResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${CHANNEL_ID}&key=${YOUTUBE_API_KEY}`
+                );
+                const channelData = await channelResponse.json();
+                const channel = channelData.items[0];
+                
+                // Get latest videos
+                const searchResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&order=date&type=video&maxResults=5&key=${YOUTUBE_API_KEY}`
+                );
+                const searchData = await searchResponse.json();
+                const videoIds = searchData.items.map(item => item.id.videoId).join(',');
+                
+                // Get video statistics
+                const videosResponse = await fetch(
+                    `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`
+                );
+                const videosData = await videosResponse.json();
+                
+                renderDashboard(channel, videosData.items);
+                
+                // Update timestamp
+                document.getElementById('lastUpdated').textContent = 
+                    `Last updated: ${new Date().toLocaleString()}`;
+                    
+            } catch (error) {
+                dashboard.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading data:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function renderDashboard(channel, videos) {
+            const stats = channel.statistics;
+            const latestVideo = videos[0];
+            
+            const html = `
+                <!-- Channel Overview -->
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">👥</span>
+                            <span class="card-title">Subscribers</span>
+                        </div>
+                        <div class="stat-big">${formatNumber(stats.subscriberCount)}</div>
+                        <div class="stat-label">Total Subscribers</div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">👁️</span>
+                            <span class="card-title">Total Views</span>
+                        </div>
+                        <div class="stat-big">${formatNumber(stats.viewCount)}</div>
+                        <div class="stat-label">Lifetime Views</div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">🎬</span>
+                            <span class="card-title">Videos</span>
+                        </div>
+                        <div class="stat-big">${formatNumber(stats.videoCount)}</div>
+                        <div class="stat-label">Published Videos</div>
+                    </div>
+                </div>
+                
+                <!-- Latest Video -->
+                <div class="video-card">
+                    <div class="card-header">
+                        <span class="card-icon">🎥</span>
+                        <span class="card-title">Latest Video</span>
+                    </div>
+                    <div class="video-title">
+                        <a href="https://www.youtube.com/watch?v=${latestVideo.id}" 
+                           target="_blank" class="video-link">
+                            ${latestVideo.snippet.title}
+                        </a>
+                    </div>
+                    <div class="stat-row">
+                        <span>Published</span>
+                        <span class="stat-value">${formatDate(latestVideo.snippet.publishedAt)}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>👁️ Views</span>
+                        <span class="stat-value">${formatNumber(latestVideo.statistics.viewCount)}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>👍 Likes</span>
+                        <span class="stat-value">${formatNumber(latestVideo.statistics.likeCount)}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>💬 Comments</span>
+                        <span class="stat-value">${formatNumber(latestVideo.statistics.commentCount)}</span>
+                    </div>
+                    ${getPerformanceBadge(latestVideo)}
+                </div>
+                
+                <!-- Recent Videos -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <span class="card-title">Recent Videos Performance</span>
+                    </div>
+                    ${videos.map((video, index) => `
+                        <div class="stat-row">
+                            <span style="flex: 2;">
+                                <a href="https://www.youtube.com/watch?v=${video.id}" 
+                                   target="_blank" class="video-link" style="font-size: 0.9em;">
+                                    ${video.snippet.title.substring(0, 50)}${video.snippet.title.length > 50 ? '...' : ''}
+                                </a>
+                                <br>
+                                <small style="color: #999;">${formatDate(video.snippet.publishedAt)}</small>
+                            </span>
+                            <span class="stat-value" style="text-align: right;">
+                                ${formatNumber(video.statistics.viewCount)} views<br>
+                                <small style="color: #999;">${formatNumber(video.statistics.likeCount)} likes</small>
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Insights -->
+                <div class="alert ${getAlertClass(latestVideo)}">
+                    <strong>Performance Insight:</strong> ${getInsight(latestVideo, videos)}
+                </div>
+            `;
+            
+            document.getElementById('dashboard').innerHTML = html;
+        }
+        
+        function formatNumber(num) {
+            if (!num) return '0';
+            return parseInt(num).toLocaleString();
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            return date.toLocaleDateString();
+        }
+        
+        function getPerformanceBadge(video) {
+            const views = parseInt(video.statistics.viewCount);
+            const daysSince = Math.floor((new Date() - new Date(video.snippet.publishedAt)) / (1000 * 60 * 60 * 24));
+            const viewsPerDay = views / Math.max(daysSince, 1);
+            
+            let badge = '';
+            if (viewsPerDay < 5) {
+                badge = '<span class="performance-badge badge-low">⚠️ Low Performance</span>';
+            } else if (viewsPerDay < 20) {
+                badge = '<span class="performance-badge badge-medium">📈 Average Performance</span>';
+            } else {
+                badge = '<span class="performance-badge badge-good">🚀 Good Performance</span>';
+            }
+            
+            return badge;
+        }
+        
+        function getAlertClass(video) {
+            const views = parseInt(video.statistics.viewCount);
+            const daysSince = Math.floor((new Date() - new Date(video.snippet.publishedAt)) / (1000 * 60 * 60 * 24));
+            const viewsPerDay = views / Math.max(daysSince, 1);
+            
+            if (viewsPerDay < 5) return 'alert-danger';
+            if (viewsPerDay < 20) return '';
+            return 'alert-success';
+        }
+        
+        function getInsight(latestVideo, allVideos) {
+            const views = parseInt(latestVideo.statistics.viewCount);
+            const daysSince = Math.floor((new Date() - new Date(latestVideo.snippet.publishedAt)) / (1000 * 60 * 60 * 24));
+            const viewsPerDay = views / Math.max(daysSince, 1);
+            
+            if (viewsPerDay < 5) {
+                return `Your latest video is getting ${viewsPerDay.toFixed(1)} views/day. This is below average. Consider: improving thumbnails, promoting on Instagram, optimizing title/description.`;
+            } else if (viewsPerDay < 20) {
+                return `Your latest video is getting ${viewsPerDay.toFixed(1)} views/day. Moderate performance. Keep promoting and engaging with your audience.`;
+            } else {
+                return `Your latest video is performing well with ${viewsPerDay.toFixed(1)} views/day! Keep up the momentum.`;
+            }
+        }
+        
+        // Load data on page load
+        loadData();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
