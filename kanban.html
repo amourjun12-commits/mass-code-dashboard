@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kai's Task Board</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .column {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .column-icon {
+            font-size: 24px;
+        }
+
+        .column-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .task-count {
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 200px;
+        }
+
+        .task {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            cursor: grab;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .task:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .task.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .task-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .task-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+
+        .task-delete:hover {
+            background: #ff3838;
+        }
+
+        .add-task-form {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-task-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .add-task-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-task-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .add-task-btn:hover {
+            background: #5568d3;
+        }
+
+        .column.backlog .column-header { border-bottom-color: #3498db; }
+        .column.progress .column-header { border-bottom-color: #f39c12; }
+        .column.blocked .column-header { border-bottom-color: #e74c3c; }
+        .column.done .column-header { border-bottom-color: #2ecc71; }
+
+        footer {
+            text-align: center;
+            color: white;
+            font-size: 14px;
+            margin-top: 30px;
+            opacity: 0.9;
+        }
+
+        .drag-over {
+            background: #f0f0f0;
+            border: 2px dashed #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐬 Kai's Task Board</h1>
+            <p class="subtitle">Last updated: <span id="lastUpdated">Loading...</span></p>
+        </header>
+
+        <div class="board">
+            <div class="column backlog" data-status="backlog">
+                <div class="column-header">
+                    <span class="column-icon">📋</span>
+                    <span class="column-title">Backlog</span>
+                    <span class="task-count" data-count="backlog">0</span>
+                </div>
+                <div class="tasks" data-tasks="backlog"></div>
+                <div class="add-task-form">
+                    <input type="text" class="add-task-input" placeholder="Add task..." data-input="backlog">
+                    <button class="add-task-btn" data-btn="backlog">Add</button>
+                </div>
+            </div>
+
+            <div class="column progress" data-status="progress">
+                <div class="column-header">
+                    <span class="column-icon">🔨</span>
+                    <span class="column-title">In Progress</span>
+                    <span class="task-count" data-count="progress">0</span>
+                </div>
+                <div class="tasks" data-tasks="progress"></div>
+                <div class="add-task-form">
+                    <input type="text" class="add-task-input" placeholder="Add task..." data-input="progress">
+                    <button class="add-task-btn" data-btn="progress">Add</button>
+                </div>
+            </div>
+
+            <div class="column blocked" data-status="blocked">
+                <div class="column-header">
+                    <span class="column-icon">🚫</span>
+                    <span class="column-title">Blocked</span>
+                    <span class="task-count" data-count="blocked">0</span>
+                </div>
+                <div class="tasks" data-tasks="blocked"></div>
+                <div class="add-task-form">
+                    <input type="text" class="add-task-input" placeholder="Add task..." data-input="blocked">
+                    <button class="add-task-btn" data-btn="blocked">Add</button>
+                </div>
+            </div>
+
+            <div class="column done" data-status="done">
+                <div class="column-header">
+                    <span class="column-icon">✅</span>
+                    <span class="column-title">Done</span>
+                    <span class="task-count" data-count="done">0</span>
+                </div>
+                <div class="tasks" data-tasks="done"></div>
+                <div class="add-task-form">
+                    <input type="text" class="add-task-input" placeholder="Add task..." data-input="done">
+                    <button class="add-task-btn" data-btn="done">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Drag tasks between columns • Changes save automatically • Built for Bigo 🚀</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initial data
+        const initialTasks = {
+            backlog: [
+                'Review current business model and identify misalignments (night calls, platform dependency)',
+                'Research potential one-vehicle options that align with fitness/mentorship vision',
+                'Set up habit tracking template for daily review',
+                'Identify 3-5 potential mastermind/community groups for circle expansion',
+                'Create morning routine checklist template'
+            ],
+            progress: [],
+            blocked: [],
+            done: [
+                'Read and process full Alchemy of Self manifesto (2025-01-15)',
+                'Update USER.md with comprehensive context (2025-01-15)',
+                'Create memory/2025-01-15.md log (2025-01-15)',
+                'Set up KANBAN.md for task tracking (2025-01-15)',
+                'Build interactive Kanban web board (2025-01-15)'
+            ]
+        };
+
+        // Load tasks from localStorage or use initial data
+        let tasks = JSON.parse(localStorage.getItem('kanbanTasks')) || initialTasks;
+
+        function saveData() {
+            localStorage.setItem('kanbanTasks', JSON.stringify(tasks));
+            updateLastUpdated();
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const formatted = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            document.getElementById('lastUpdated').textContent = formatted;
+        }
+
+        function createTaskElement(text, status) {
+            const task = document.createElement('div');
+            task.className = 'task';
+            task.draggable = true;
+            task.innerHTML = `
+                <div class="task-text">${text}</div>
+                <div class="task-meta">
+                    <span class="task-date">${new Date().toLocaleDateString()}</span>
+                    <button class="task-delete">Delete</button>
+                </div>
+            `;
+
+            // Drag events
+            task.addEventListener('dragstart', (e) => {
+                task.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', task.innerHTML);
+                e.dataTransfer.setData('status', status);
+                e.dataTransfer.setData('text', text);
+            });
+
+            task.addEventListener('dragend', () => {
+                task.classList.remove('dragging');
+            });
+
+            // Delete button
+            task.querySelector('.task-delete').addEventListener('click', () => {
+                tasks[status] = tasks[status].filter(t => t !== text);
+                saveData();
+                render();
+            });
+
+            return task;
+        }
+
+        function updateCounts() {
+            Object.keys(tasks).forEach(status => {
+                const count = tasks[status].length;
+                document.querySelector(`[data-count="${status}"]`).textContent = count;
+            });
+        }
+
+        function render() {
+            Object.keys(tasks).forEach(status => {
+                const container = document.querySelector(`[data-tasks="${status}"]`);
+                container.innerHTML = '';
+                tasks[status].forEach(text => {
+                    container.appendChild(createTaskElement(text, status));
+                });
+            });
+            updateCounts();
+            updateLastUpdated();
+        }
+
+        // Set up drag and drop zones
+        document.querySelectorAll('.tasks').forEach(container => {
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                container.classList.add('drag-over');
+            });
+
+            container.addEventListener('dragleave', () => {
+                container.classList.remove('drag-over');
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+
+                const oldStatus = e.dataTransfer.getData('status');
+                const newStatus = container.getAttribute('data-tasks');
+                const text = e.dataTransfer.getData('text');
+
+                if (oldStatus !== newStatus) {
+                    tasks[oldStatus] = tasks[oldStatus].filter(t => t !== text);
+                    tasks[newStatus].push(text);
+                    saveData();
+                    render();
+                }
+            });
+        });
+
+        // Set up add task buttons
+        document.querySelectorAll('.add-task-btn').forEach(btn => {
+            const status = btn.getAttribute('data-btn');
+            const input = document.querySelector(`[data-input="${status}"]`);
+
+            btn.addEventListener('click', () => {
+                const text = input.value.trim();
+                if (text) {
+                    tasks[status].push(text);
+                    saveData();
+                    render();
+                    input.value = '';
+                }
+            });
+
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    btn.click();
+                }
+            });
+        });
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
